@@ -89,7 +89,39 @@ public class ElectionAnalysis {
      * @param file String filename to parse, in csv format.
      */
     public void readStates(String file) {
-        // WRITE YOUR CODE HERE
+        StdIn.setFile(file);
+        while (StdIn.hasNextLine()) {
+            String[] split = StdIn.readLine().split(",");
+            int year = Integer.parseInt(split[4]);
+            String state = split[1];
+            YearNode ptr = years;
+            while (ptr != null) {
+                if (ptr.getYear() == year) {
+                    StateNode statePtr = ptr.getStates();
+                    if (statePtr == null) {
+                        StateNode newState = new StateNode();
+                        newState.setStateName(state);
+                        newState.setNext(newState);
+                        ptr.setStates(newState);
+                        continue;
+                    }
+                    do {
+                        if (statePtr.getStateName().equals(state)) {
+                            break;
+                        }
+                        statePtr = statePtr.getNext();
+                    } while (statePtr != ptr.getStates());
+                    if (!statePtr.getStateName().equals(state)) {
+                        StateNode newState = new StateNode();
+                        newState.setStateName(state);
+                        newState.setNext(ptr.getStates().getNext());
+                        ptr.getStates().setNext(newState);
+                        ptr.setStates(newState);
+                    }
+                }
+                ptr = ptr.getNext();
+            }
+        }
     }
 
     /*
@@ -108,8 +140,79 @@ public class ElectionAnalysis {
      * @param file String filename of CSV to read from
      */
     public void readElections(String file) {
-        // WRITE YOUR CODE HERE
+        StdIn.setFile(file);
+        while (StdIn.hasNextLine()) {
+            String line = StdIn.readLine();
+            String[] split = line.split(",");
+            int raceID = Integer.parseInt(split[0]);
+            String stateName = split[1];
+            int officeID = Integer.parseInt(split[2]);
+            boolean senate = split[3].equals("U.S. Senate");
+            int year = Integer.parseInt(split[4]);
+            String canName = split[5];
+            String party = split[6];
+            int votes = Integer.parseInt(split[7]);
+            boolean winner = split[8].toLowerCase().equals("true");
 
+            YearNode ptr = years;
+            while (ptr != null && ptr.getYear() != year) {
+                ptr = ptr.getNext();
+            }
+            if (ptr == null) {
+                continue;
+            }
+
+            StateNode statePtr = ptr.getStates();
+            if (statePtr == null) {
+                continue;
+            }
+            StateNode startStatePtr = statePtr;
+            boolean stateFound = false;
+            do {
+                if (statePtr.getStateName().equals(stateName)) {
+                    stateFound = true;
+                    break;
+                }
+                statePtr = statePtr.getNext();
+            } while (statePtr != startStatePtr);
+
+            if (!stateFound) {
+                continue;
+            }
+
+            ElectionNode electionPtr = statePtr.getElections();
+            ElectionNode prevElectionPtr = null;
+            boolean electionFound = false;
+
+            while (electionPtr != null) {
+                if (electionPtr.getRaceID() == raceID) {
+                    electionFound = true;
+                    break;
+                }
+                prevElectionPtr = electionPtr;
+                electionPtr = electionPtr.getNext();
+            }
+
+            if (electionFound) {
+                if (electionPtr.isCandidate(canName)) {
+                    electionPtr.modifyCandidate(canName, votes, party);
+                } else {
+                    electionPtr.addCandidate(canName, votes, party, winner);
+                }
+            } else {
+                ElectionNode newElection = new ElectionNode();
+                newElection.setRaceID(raceID);
+                newElection.setoOfficeID(officeID);
+                newElection.setSenate(senate);
+                newElection.addCandidate(canName, votes, party, winner);
+
+                if (statePtr.getElections() == null) {
+                    statePtr.setElections(newElection);
+                } else {
+                    prevElectionPtr.setNext(newElection);
+                }
+            }
+        }
     }
 
     /*
@@ -149,9 +252,40 @@ public class ElectionAnalysis {
      * @return avg number of votes this state in this year
      */
     public int totalVotes(int year, String stateName) {
-        // WRITE YOUR CODE HERE
+        YearNode ptr = years;
+        while (ptr != null && ptr.getYear() != year) {
+            ptr = ptr.getNext();
+        }
+        if (ptr == null) {
+            return 0;
+        }
 
-        return -1;
+        StateNode statePtr = ptr.getStates();
+        if (statePtr == null) {
+            return 0;
+        }
+        StateNode startStatePtr = statePtr;
+        boolean stateFound = false;
+        do {
+            if (statePtr.getStateName().equals(stateName)) {
+                stateFound = true;
+                break;
+            }
+            statePtr = statePtr.getNext();
+        } while (statePtr != startStatePtr);
+
+        if (!stateFound) {
+            return 0;
+        }
+
+        ElectionNode electionPtr = statePtr.getElections();
+        int totalVotes = 0;
+        while (electionPtr != null) {
+            totalVotes += electionPtr.getVotes();
+            electionPtr = electionPtr.getNext();
+        }
+
+        return totalVotes;
     }
 
     /*
@@ -165,9 +299,41 @@ public class ElectionAnalysis {
      * @return avg number of votes this state in this year
      */
     public int averageVotes(int year, String stateName) {
-        // WRITE YOUR CODE HERE
+        YearNode ptr = years;
+        while (ptr != null && ptr.getYear() != year) {
+            ptr = ptr.getNext();
+        }
+        if (ptr == null) {
+            return 0;
+        }
 
-        return -1;
+        StateNode statePtr = ptr.getStates();
+        if (statePtr == null) {
+            return 0;
+        }
+        StateNode startStatePtr = statePtr;
+        boolean stateFound = false;
+        do {
+            if (statePtr.getStateName().equals(stateName)) {
+                stateFound = true;
+                break;
+            }
+            statePtr = statePtr.getNext();
+        } while (statePtr != startStatePtr);
+
+        if (!stateFound) {
+            return 0;
+        }
+
+        ElectionNode electionPtr = statePtr.getElections();
+        int totalVotes = 0;
+        int totalElections = 0;
+        while (electionPtr != null) {
+            totalVotes += electionPtr.getVotes();
+            totalElections++;
+            electionPtr = electionPtr.getNext();
+        }
+        return totalVotes / totalElections;
     }
 
     /*
@@ -182,8 +348,27 @@ public class ElectionAnalysis {
      * @return String party abbreviation
      */
     public String candidatesParty(String candidateName) {
-        // WRITE YOUR CODE HERE
-
-        return null;
+        String party = null;
+        YearNode yearPtr = years;
+        while (yearPtr != null) {
+            StateNode statePtr = yearPtr.getStates();
+            if (statePtr == null) {
+                yearPtr = yearPtr.getNext();
+                continue;
+            }
+            StateNode startStatePtr = statePtr;
+            do {
+                ElectionNode electionPtr = statePtr.getElections();
+                while (electionPtr != null) {
+                    if (electionPtr.isCandidate(candidateName)) {
+                        party = electionPtr.getParty(candidateName);
+                    }
+                    electionPtr = electionPtr.getNext();
+                }
+                statePtr = statePtr.getNext();
+            } while (statePtr != startStatePtr);
+            yearPtr = yearPtr.getNext();
+        }
+        return party;
     }
 }

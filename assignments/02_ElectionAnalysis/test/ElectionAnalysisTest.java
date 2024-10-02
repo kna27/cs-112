@@ -49,7 +49,7 @@ public class ElectionAnalysisTest {
         for (YearNode yr = test.years(); yr != null; yr = yr.getNext()) {
             assertTrue(yr.getYear() == years[year]);
             int state = 0;
-            StateNode st = yr.getStates();
+            StateNode st = yr.getStates().getNext();
             do {
                 assertTrue(st.getStateName().equals(statesInYears[year][state]));
                 state++;

@@ -58,7 +58,24 @@ public class Venom {
      * @param symbioteHost the SymbioteHost object to insert
      */
     public void insertSymbioteHost(SymbioteHost symbioteHost) {
-        // WRITE YOUR CODE HERE
+        root = insertHelper(root, symbioteHost);
+    }
+
+    private SymbioteHost insertHelper(SymbioteHost node, SymbioteHost symbioteHost) {
+        if (node == null) {
+            return symbioteHost;
+        }
+        int cmp = symbioteHost.getName().compareTo(node.getName());
+        if (cmp < 0) {
+            node.setLeft(insertHelper(node.getLeft(), symbioteHost));
+        } else if (cmp > 0) {
+            node.setRight(insertHelper(node.getRight(), symbioteHost));
+        } else {
+            node.setSymbioteCompatibility(symbioteHost.getSymbioteCompatibility());
+            node.setMentalStability(symbioteHost.getMentalStability());
+            node.setHasAntibodies(symbioteHost.hasAntibodies());
+        }
+        return node;
     }
 
     /**
@@ -67,13 +84,17 @@ public class Venom {
      * @param filename filename to read
      */
     public void buildTree(String filename) {
-        // WRITE YOUR CODE HERE
+        SymbioteHost[] hosts = createSymbioteHosts(filename);
+        for (SymbioteHost host : hosts) {
+            insertSymbioteHost(host);
+        }
     }
 
     /**
      * Finds the most compatible host in the tree. The most compatible host
-     * is the one with the highest suitability that does not have antibodies.
-     * PREorder traversal is used to traverse the tree. The host with the highest suitability
+     * is the one with the highest suitability.
+     * PREorder traversal is used to traverse the tree. The host with the highest
+     * suitability
      * is returned. If the tree is empty, null is returned.
      * 
      * USE the calculateSuitability method on a SymbioteHost instance to get
@@ -82,25 +103,50 @@ public class Venom {
      * @return the most compatible SymbioteHost object
      */
     public SymbioteHost findMostSuitable() {
-        // WRITE YOUR CODE HERE
-        return null; // UPDATE this line, provided so code compiles
+        return findMostSuitableHelper(root, null);
+    }
+
+    private SymbioteHost findMostSuitableHelper(SymbioteHost node, SymbioteHost currentBest) {
+        if (node == null) {
+            return currentBest;
+        }
+        if (currentBest == null || node.calculateSuitability() > currentBest.calculateSuitability()) {
+            currentBest = node;
+        }
+        currentBest = findMostSuitableHelper(node.getLeft(), currentBest);
+        currentBest = findMostSuitableHelper(node.getRight(), currentBest);
+        return currentBest;
     }
 
     /**
-     * Finds all hosts in the tree that have antibodies. INorder traversal is used to
+     * Finds all hosts in the tree that have antibodies. INorder traversal is used
+     * to
      * traverse the tree. The hosts that have antibodies are added to an
      * ArrayList. If the tree is empty, null is returned.
      * 
      * @return an ArrayList of SymbioteHost objects that have antibodies
      */
     public ArrayList<SymbioteHost> findHostsWithAntibodies() {
-        // WRITE YOUR CODE HERE
-        return null;  // UPDATE this line, provided so code compiles
+        ArrayList<SymbioteHost> hosts = new ArrayList<>();
+        findHostsWithAntibodiesHelper(root, hosts);
+        return hosts;
+    }
+
+    private void findHostsWithAntibodiesHelper(SymbioteHost node, ArrayList<SymbioteHost> list) {
+        if (node == null) {
+            return;
+        }
+        findHostsWithAntibodiesHelper(node.getLeft(), list);
+        if (node.hasAntibodies()) {
+            list.add(node);
+        }
+        findHostsWithAntibodiesHelper(node.getRight(), list);
     }
 
     /**
      * Finds all hosts in the tree that have a suitability between the given
-     * range. The range is inclusive. Level order traversal is used to traverse the tree. The
+     * range. The range is inclusive. Level order traversal is used to traverse the
+     * tree. The
      * hosts that fall within the range are added to an ArrayList. If the tree
      * is empty, null is returned.
      * 
@@ -109,7 +155,26 @@ public class Venom {
      * @return an ArrayList of SymbioteHost objects that fall within the range
      */
     public ArrayList<SymbioteHost> findHostsWithinSuitabilityRange(int minSuitability, int maxSuitability) {
-        return null; // UPDATE this line, provided so code compiles
+        if (root == null) {
+            return null;
+        }
+        ArrayList<SymbioteHost> suitable = new ArrayList<>();
+        Queue<SymbioteHost> queue = new Queue<>();
+        queue.enqueue(root);
+        while (!queue.isEmpty()) {
+            SymbioteHost node = queue.dequeue();
+            int suitability = node.calculateSuitability();
+            if (suitability >= minSuitability && suitability <= maxSuitability) {
+                suitable.add(node);
+            }
+            if (node.getLeft() != null) {
+                queue.enqueue(node.getLeft());
+            }
+            if (node.getRight() != null) {
+                queue.enqueue(node.getRight());
+            }
+        }
+        return suitable;
     }
 
     /**
@@ -119,7 +184,46 @@ public class Venom {
      * @param name the name of the SymbioteHost object to delete
      */
     public void deleteSymbioteHost(String name) {
-        // WRITE YOUR CODE HERE
+        root = deleteHelper(root, name);
+    }
+
+    private SymbioteHost deleteHelper(SymbioteHost node, String name) {
+        if (node == null) {
+            return null;
+        }
+        int cmp = name.compareTo(node.getName());
+        if (cmp < 0) {
+            node.setLeft(deleteHelper(node.getLeft(), name));
+        } else if (cmp > 0) {
+            node.setRight(deleteHelper(node.getRight(), name));
+        } else {
+            if (node.getLeft() == null) {
+                return node.getRight();
+            }
+            if (node.getRight() == null) {
+                return node.getLeft();
+            }
+            SymbioteHost minRight = getMin(node.getRight());
+            minRight.setRight(deleteMin(node.getRight()));
+            minRight.setLeft(node.getLeft());
+            node = minRight;
+        }
+        return node;
+    }
+
+    private SymbioteHost getMin(SymbioteHost node) {
+        while (node.getLeft() != null) {
+            node = node.getLeft();
+        }
+        return node;
+    }
+
+    private SymbioteHost deleteMin(SymbioteHost node) {
+        if (node.getLeft() == null) {
+            return node.getRight();
+        }
+        node.setLeft(deleteMin(node.getLeft()));
+        return node;
     }
 
     /**

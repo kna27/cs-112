@@ -86,19 +86,19 @@ public class AirQuality {
 
     public State addState(String inputLine) {
         String[] token = inputLine.split(",");
-        String stateName = token[0];
-        int key = Math.abs(stateName.hashCode());
+        String name = token[0];
+        int key = Math.abs(name.hashCode());
         int index = key % states.length;
-        State current = states[index];
+        State curr = states[index];
 
-        while (current != null) {
-            if (current.getName().equals(stateName)) {
-                return current;
+        while (curr != null) {
+            if (curr.getName().equals(name)) {
+                return curr;
             }
-            current = current.getNext();
+            curr = curr.getNext();
         }
 
-        State newState = new State(stateName);
+        State newState = new State(name);
         newState.setNext(states[index]);
         states[index] = newState;
 
@@ -113,12 +113,8 @@ public class AirQuality {
      * 
      * @return true if resizing needs to happen, false otherwise
      */
-
     public boolean checkCountiesHTLoadFactor(State state) {
-
-        // WRITE YOUR CODE HERE
-
-        return true; // update this line
+        return (state.getNumberOfCounties() / state.getCounties().length) >= state.getLoadFactor();
     }
 
     /**
@@ -127,9 +123,22 @@ public class AirQuality {
      * USE: county.hashCode() as the key into the State's counties hash table.
      */
     public void rehash(State state) {
+        County[] old = state.getCounties();
+        County[] resized = new County[old.length * 2];
+        for (County county : old) {
+            while (county != null) {
+                County next = county.getNext();
 
-        // WRITE YOUR CODE HERE
+                int newKey = Math.abs(county.hashCode());
+                int newIndex = newKey % resized.length;
 
+                county.setNext(resized[newIndex]);
+                resized[newIndex] = county;
+
+                county = next;
+            }
+        }
+        state.setCounties(resized);
     }
 
     /**
@@ -157,18 +166,121 @@ public class AirQuality {
      */
 
     public void addCountyAndPollutant(State state, String inputLine) {
+        String[] tokens = inputLine.split(",");
 
-        // WRITE YOUR CODE HERE
+        String name = tokens[1];
+        int aqi = Integer.parseInt(tokens[2]);
+        double latitude = Double.parseDouble(tokens[3]);
+        double longitude = Double.parseDouble(tokens[4]);
+        String pollutant = tokens[5];
+        String color = tokens[6];
 
+        int key = Math.abs(name.hashCode());
+        County[] counties = state.getCounties();
+        int index = key % counties.length;
+
+        County curr = counties[index];
+        County county = null;
+
+        while (curr != null) {
+            if (curr.getName().equals(name)) {
+                county = curr;
+                break;
+            }
+            curr = curr.getNext();
+        }
+
+        if (county == null) {
+            County newCounty = new County(name, latitude, longitude, null);
+            state.addCounty(newCounty);
+            county = newCounty;
+        }
+
+        if (checkCountiesHTLoadFactor(state)) {
+            rehash(state);
+            counties = state.getCounties();
+            index = key % counties.length;
+            curr = counties[index];
+            county = null;
+            while (curr != null) {
+                if (curr.getName().equals(name)) {
+                    county = curr;
+                    break;
+                }
+                curr = curr.getNext();
+            }
+        }
+
+        ArrayList<Pollutant> pollutants = county.getPollutants();
+        boolean found = false;
+
+        for (Pollutant countyPollutant : pollutants) {
+            if (countyPollutant.getName().equals(pollutant)) {
+                countyPollutant.setAQI(aqi);
+                countyPollutant.setColor(color);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            pollutants.add(new Pollutant(pollutant, aqi, color));
+        }
     }
 
     /**
      * Sets states' simple stats AQI for each State in the hash table.
      */
     public void setStatesAQIStats() {
+        for (int i = 0; i < states.length; i++) {
+            State currState = states[i];
+            while (currState != null) {
+                double total = 0;
+                int count = 0;
+                double highest = Double.NEGATIVE_INFINITY;
+                double lowest = Double.POSITIVE_INFINITY;
+                County highestAQICounty = null;
+                County lowestAQICounty = null;
 
-        // WRITE YOUR CODE HERE
+                County[] counties = currState.getCounties();
 
+                for (int j = 0; j < counties.length; j++) {
+                    County currCounty = counties[j];
+                    while (currCounty != null) {
+                        ArrayList<Pollutant> pollutants = currCounty.getPollutants();
+
+                        for (Pollutant pollutant : pollutants) {
+                            int aqi = pollutant.getAQI();
+                            total += aqi;
+                            count++;
+
+                            if (aqi > highest) {
+                                highest = aqi;
+                                highestAQICounty = currCounty;
+                            }
+
+                            if (aqi < lowest) {
+                                lowest = aqi;
+                                lowestAQICounty = currCounty;
+                            }
+                        }
+
+                        currCounty = currCounty.getNext();
+                    }
+                }
+
+                if (count > 0) {
+                    currState.setAvgAQI(total / count);
+                } else {
+                    currState.setAvgAQI(0);
+                }
+
+                currState.setHighestAQI(highestAQICounty);
+                currState.setLowestAQI(lowestAQICounty);
+
+                currState = currState.getNext();
+            }
+        }
     }
 
     /**
@@ -178,15 +290,38 @@ public class AirQuality {
      * 
      * @param stateName     The name of the state
      * @param pollutantName The parameter name to filter by
-     * @param AQITheshold   The AQI threshold
+     * @param AQIThreshold  The AQI threshold
      * @return ArrayList<County> List of counties that meet the criteria
      */
 
-    public ArrayList<County> meetsThreshold(String stateName, String pollutantName, int AQITheshold) {
+    public ArrayList<County> meetsThreshold(String stateName, String pollutantName, int AQIThreshold) {
+        ArrayList<County> met = new ArrayList<>();
+        int key = Math.abs(stateName.hashCode());
+        int index = key % states.length;
+        State state = states[index];
 
-        // WRITE YOUR CODE HERE
+        while (state != null) {
+            if (state.getName().equals(stateName)) {
+                County[] counties = state.getCounties();
+                for (County county : counties) {
+                    County curr = county;
+                    while (curr != null) {
+                        ArrayList<Pollutant> pollutants = curr.getPollutants();
+                        for (Pollutant pollutant : pollutants) {
+                            if (pollutant.getName().equals(pollutantName) && pollutant.getAQI() >= AQIThreshold) {
+                                met.add(curr);
+                                break;
+                            }
+                        }
+                        curr = curr.getNext();
+                    }
+                }
+                break;
+            }
+            state = state.getNext();
+        }
 
-        return null; // update this line
+        return met;
     }
 
 }

@@ -1,7 +1,6 @@
 package trick;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class NeighborhoodMap {
     public static void main(String[] args) {
@@ -26,8 +25,8 @@ public class NeighborhoodMap {
             houses.add(house);
             graph.addVertex(house);
 
-            int candies = StdIn.readInt();
-            for (int j = 0; j < candies; j++) {
+            int numCandies = StdIn.readInt();
+            for (int j = 0; j < numCandies; j++) {
                 graph.addCandy(house, new Candy(StdIn.readString(), StdIn.readInt()));
             }
         }
@@ -46,7 +45,7 @@ public class NeighborhoodMap {
             List<Candy> candies = graph.getCandies(houseName);
             if (candies != null) {
                 for (Candy candy : candies) {
-                    StdOut.print(" " + candy.getName() + " " + candy.getCount());
+                    StdOut.print(" " + candy.name + " " + candy.count);
                 }
             }
             StdOut.println();
@@ -57,7 +56,7 @@ public class NeighborhoodMap {
             List<House> adjHouses = graph.adj(house);
             if (adjHouses != null) {
                 for (House neighbor : adjHouses) {
-                    StdOut.print(" " + neighbor.getName() + " " + neighbor.getWeight());
+                    StdOut.print(" " + neighbor.name + " " + neighbor.weight);
                 }
             }
             StdOut.println();
